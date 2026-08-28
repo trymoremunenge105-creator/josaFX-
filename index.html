@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>JosaFX Signal Advisor</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f7fb;color:#10233f}
+header{background:#0b63ce;color:white;padding:18px 16px;position:sticky;top:0;z-index:5}
+.brand{font-size:25px;font-weight:800}.sub{opacity:.85;font-size:12px;margin-top:3px}
+main{max-width:720px;margin:auto;padding:14px}
+.card{background:white;border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 4px 18px #0b356615}
+label{display:block;font-size:12px;font-weight:700;margin:8px 0 6px}
+input,select,button{width:100%;padding:13px;border:1px solid #d5deea;border-radius:11px;font-size:15px}
+button{border:0;background:#0b63ce;color:white;font-weight:800;margin-top:12px}
+button.secondary{background:#eaf2fc;color:#0b63ce}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.signal{text-align:center;border-radius:16px;padding:18px;margin-top:10px;background:#eef3f8}
+.signal.buy{background:#e7f8ee;color:#08733b}.signal.sell{background:#fff0f0;color:#bd2222}
+.signal.wait{background:#fff8df;color:#7b5b00}
+.signal h1{margin:0;font-size:34px}.signal p{margin:7px 0 0}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:12px}
+.stat{background:#f7f9fc;border-radius:12px;padding:11px}.stat b{display:block;font-size:16px;margin-top:4px}
+canvas{width:100%;height:280px;border-radius:12px;background:#0d1726}
+.small{font-size:11px;color:#64748b;line-height:1.5}
+.status{font-size:12px;margin-top:8px}.ok{color:#08733b}.err{color:#bd2222}
+.row{display:flex;gap:8px}.row>*{flex:1}
+</style>
+
+<style>
+:root{--jblue:#0867d8;--jbg:#f4f7fb;--jink:#10243f;--jmuted:#718198}
+body{background:var(--jbg)!important;color:var(--jink)}
+header{background:linear-gradient(135deg,#0759bd,#0b7be9)!important;border-radius:0 0 24px 24px!important;padding:20px 16px!important;position:sticky;top:0;z-index:10}
+header h1{font-size:28px!important;letter-spacing:-1px}
+main{max-width:520px!important;padding:12px!important}
+.card{border:1px solid #e2e9f2!important;border-radius:18px!important;box-shadow:0 6px 22px #173a5d0b!important}
+button{border-radius:12px!important}
+select,input{border-radius:12px!important;background:#f7f9fc!important}
+.signal{border-radius:17px!important;padding:18px!important}
+.signal h1{font-size:34px!important}
+canvas{border-radius:15px!important;background:#0c1728!important}
+.app-shell{max-width:520px;margin:auto;padding-bottom:76px}
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,100%);height:68px;background:#fffffff2;backdrop-filter:blur(14px);border-top:1px solid #e1e8f0;display:grid;grid-template-columns:repeat(4,1fr);z-index:50}
+.bottom-nav button{border:0;background:none;color:#7b899d;font-size:10px;font-weight:700}
+.bottom-nav button.active{color:#0867d8}
+.bottom-nav b{display:block;font-size:20px;margin-bottom:2px}
+.app-title{font-size:11px;opacity:.82;margin-top:-5px}
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0867d8">
+<meta name="background-color" content="#f4f7fb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="JosaFX">
+</head>
+<body><div class="app-shell">
+<header><div class="brand">JosaFX</div><div class="sub">Market Signal Advisor • real market-data analysis</div></header>
+<main>
+<section class="card">
+<label>Twelve Data API key</label>
+<input id="key" type="password" placeholder="Paste your private API key">
+<div class="small">Your key is used by this browser to request market data. Do not publish this HTML with your key embedded in it.</div>
+<div class="grid">
+<div><label>Symbol</label><select id="symbol"><option>EUR/USD</option><option>XAU/USD</option><option>GBP/USD</option><option>USD/JPY</option><option>AUD/USD</option><option>USD/CAD</option><option>USD/CHF</option><option>NZD/USD</option></select></div>
+<div><label>Timeframe</label><select id="interval"><option>5min</option><option>15min</option><option>30min</option><option>1h</option><option>4h</option></select></div>
+</div>
+<div class="row">
+<button onclick="analyze()">ANALYZE MARKET</button>
+<button class="secondary" onclick="clearKey()">CLEAR KEY</button>
+</div>
+<div id="status" class="status">Ready.</div>
+</section>
+
+<section class="card">
+<div id="signal" class="signal wait"><h1>WAIT</h1><p>Press ANALYZE MARKET</p></div>
+<div class="stats">
+<div class="stat">Price<b id="price">—</b></div>
+<div class="stat">Confidence<b id="confidence">—</b></div>
+<div class="stat">EMA 20 / 50<b id="ema">—</b></div>
+<div class="stat">RSI 14<b id="rsi">—</b></div>
+<div class="stat">MACD<b id="macd">—</b></div>
+<div class="stat">ATR 14<b id="atr">—</b></div>
+</div>
+</section>
+
+<section class="card">
+<h3 style="margin-top:0">5-minute chart</h3>
+<canvas id="chart" width="680" height="280"></canvas>
+<div class="stats">
+<div class="stat">Entry<b id="entry">—</b></div>
+<div class="stat">Stop Loss<b id="sl">—</b></div>
+<div class="stat">Take Profit 1<b id="tp1">—</b></div>
+<div class="stat">Take Profit 2<b id="tp2">—</b></div>
+</div>
+</section>
+
+<section class="card">
+<h3 style="margin-top:0">Analysis</h3>
+<div id="reasons" class="small">No analysis yet.</div>
+<p class="small"><b>Important:</b> This is a rule-based signal tool, not a guarantee of profitable trades. It uses the supplied market candles and can be wrong. Test on demo before risking money.</p>
+</section>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+let candles=[];
+
+function ema(values,p){
+  const k=2/(p+1), out=[]; let e=values[0]; out.push(e);
+  for(let i=1;i<values.length;i++){e=values[i]*k+e*(1-k);out.push(e)}
+  return out;
+}
+function rsi(v,p=14){
+  let gains=0,losses=0;
+  for(let i=1;i<=p;i++){let d=v[i]-v[i-1];if(d>=0)gains+=d;else losses-=d}
+  let ag=gains/p, al=losses/p, out=Array(p).fill(null);
+  out.push(al===0?100:100-100/(1+ag/al));
+  for(let i=p+1;i<v.length;i++){
+    let d=v[i]-v[i-1],g=Math.max(d,0),l=Math.max(-d,0);
+    ag=(ag*(p-1)+g)/p; al=(al*(p-1)+l)/p;
+    out.push(al===0?100:100-100/(1+ag/al));
+  } return out;
+}
+function atr(cs,p=14){
+  const tr=[null];
+  for(let i=1;i<cs.length;i++){
+    const c=cs[i],prev=cs[i-1];
+    tr.push(Math.max(c.high-c.low,Math.abs(c.high-prev.close),Math.abs(c.low-prev.close)));
+  }
+  let sum=0,out=Array(p).fill(null);
+  for(let i=1;i<=p;i++)sum+=tr[i];
+  let a=sum/p;out.push(a);
+  for(let i=p+1;i<cs.length;i++){a=(a*(p-1)+tr[i])/p;out.push(a)}
+  return out;
+}
+function macd(v){
+  const e12=ema(v,12),e26=ema(v,26),line=v.map((_,i)=>e12[i]-e26[i]),sig=ema(line,9);
+  return {line,sig,hist:line.map((x,i)=>x-sig[i])};
+}
+function fmt(x){return Number.isFinite(x)?x.toFixed(5):"—"}
+function clearKey(){localStorage.removeItem("josafx_key");$("key").value="";$("status").textContent="Key cleared."}
+$("key").value=localStorage.getItem("josafx_key")||"";
+
+async function analyze(){
+  const key=$("key").value.trim(), symbol=$("symbol").value, interval=$("interval").value;
+  if(!key){$("status").textContent="Enter your Twelve Data API key.";return}
+  localStorage.setItem("josafx_key",key);
+  $("status").textContent="Requesting live candles…";
+  try{
+    const url=`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(symbol)}&interval=${encodeURIComponent(interval)}&outputsize=100&apikey=${encodeURIComponent(key)}`;
+    const res=await fetch(url); const data=await res.json();
+    if(!res.ok || data.status==="error") throw new Error(data.message||"API request failed");
+    if(!data.values||data.values.length<60) throw new Error("Not enough candles returned.");
+    candles=data.values.map(x=>({time:x.datetime,open:+x.open,high:+x.high,low:+x.low,close:+x.close})).reverse();
+    const closes=candles.map(x=>x.close);
+    const e20=ema(closes,20),e50=ema(closes,50),R=rsi(closes),A=atr(candles),M=macd(closes);
+    const i=closes.length-1, price=closes[i], rv=R[i], av=A[i], ml=M.line[i], ms=M.sig[i];
+    let score=0,reasons=[];
+    if(e20[i]>e50[i]){score+=1;reasons.push("EMA20 is above EMA50 (bullish trend).")}else{score-=1;reasons.push("EMA20 is below EMA50 (bearish trend).")}
+    if(price>e20[i]){score+=1;reasons.push("Price is above EMA20.")}else{score-=1;reasons.push("Price is below EMA20.")}
+    if(ml>ms){score+=1;reasons.push("MACD is bullish.")}else{score-=1;reasons.push("MACD is bearish.")}
+    if(rv>=50&&rv<=70){score+=1;reasons.push("RSI supports bullish momentum.")}else if(rv<50&&rv>=30){score-=1;reasons.push("RSI supports bearish momentum.")}else if(rv>70){reasons.push("RSI is overbought; BUY confirmation is reduced.")}else if(rv<30){reasons.push("RSI is oversold; SELL confirmation is reduced.")}
+    const recent=candles.slice(-20), support=Math.min(...recent.map(x=>x.low)), resistance=Math.max(...recent.map(x=>x.high));
+    let direction=score>=2?"BUY":score<=-2?"SELL":"WAIT";
+    let confidence=Math.min(95,50+Math.abs(score)*12);
+    if((direction==="BUY"&&rv>70)||(direction==="SELL"&&rv<30))confidence=Math.max(50,confidence-12);
+    let entry=price,sl,tp1,tp2;
+    if(direction==="BUY"){sl=price-1.5*av;tp1=price+1.5*av;tp2=price+3*av}
+    if(direction==="SELL"){sl=price+1.5*av;tp1=price-1.5*av;tp2=price-3*av}
+    $("signal").className="signal "+direction.toLowerCase();
+    $("signal").innerHTML=`<h1>${direction}</h1><p>${symbol} • ${interval} • rule-based confirmation</p>`;
+    $("price").textContent=fmt(price);$("confidence").textContent=confidence+"%";
+    $("ema").textContent=fmt(e20[i])+" / "+fmt(e50[i]);
+    $("rsi").textContent=rv.toFixed(1);$("macd").textContent=ml.toFixed(6)+" / "+ms.toFixed(6);$("atr").textContent=av.toFixed(5);
+    $("entry").textContent=direction==="WAIT"?"—":fmt(entry);$("sl").textContent=direction==="WAIT"?"—":fmt(sl);
+    $("tp1").textContent=direction==="WAIT"?"—":fmt(tp1);$("tp2").textContent=direction==="WAIT"?"—":fmt(tp2);
+    $("reasons").innerHTML=reasons.map(x=>"• "+x).join("<br>")+`<br>• Recent support: ${fmt(support)}<br>• Recent resistance: ${fmt(resistance)}`;
+    $("status").innerHTML=`<span class="ok">✓ Live candles received: ${candles.length}. Last candle: ${candles[i].time}</span>`;
+    drawChart(candles.slice(-60));
+  }catch(e){$("status").innerHTML=`<span class="err">Error: ${e.message}</span>`}
+}
+function drawChart(cs){
+  const c=$("chart"),ctx=c.getContext("2d"),w=c.width,h=c.height;
+  ctx.clearRect(0,0,w,h); if(!cs.length)return;
+  const hi=Math.max(...cs.map(x=>x.high)),lo=Math.min(...cs.map(x=>x.low)),pad=20;
+  const xstep=(w-2*pad)/Math.max(1,cs.length-1), scale=(h-2*pad)/(hi-lo||1);
+  ctx.strokeStyle="#5f7898";ctx.lineWidth=1;
+  for(let n=0;n<5;n++){let y=pad+n*(h-2*pad)/4;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(w-pad,y);ctx.stroke()}
+  cs.forEach((x,i)=>{
+    const px=pad+i*xstep, yo=h-pad-(x.open-lo)*scale,yc=h-pad-(x.close-lo)*scale;
+    const yh=h-pad-(x.high-lo)*scale,yl=h-pad-(x.low-lo)*scale;
+    ctx.beginPath();ctx.moveTo(px,yh);ctx.lineTo(px,yl);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(px-3,yo);ctx.lineTo(px-3,yc);ctx.lineTo(px+3,yc);ctx.lineTo(px+3,yo);ctx.closePath();
+    ctx.fillStyle=x.close>=x.open?"#20b26b":"#e84b4b";ctx.fill();
+  });
+}
+</script>
+
+<nav class="bottom-nav">
+<button class="active" onclick="window.scrollTo({top:0,behavior:'smooth'});this.classList.add('active')"><b>⌂</b>Dashboard</button>
+<button onclick="document.getElementById('symbol').focus()"><b>◈</b>Markets</button>
+<button onclick="document.getElementById('account').focus()"><b>◌</b>Risk</button>
+<button onclick="document.getElementById('key').focus()"><b>⚙</b>Settings</button>
+</nav>
+</div>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+function ema(v,p){let k=2/(p+1),o=[v[0]];for(let i=1;i<v.length;i++)o.push(v[i]*k+o[i-1]*(1-k));return o}
+function rsi(v,p=14){let g=0,l=0,o=Array(p).fill(null);for(let i=1;i<=p;i++){let d=v[i]-v[i-1];g+=Math.max(d,0);l+=Math.max(-d,0)}let ag=g/p,al=l/p;o.push(al?100-100/(1+ag/al):100);for(let i=p+1;i<v.length;i++){let d=v[i]-v[i-1];ag=(ag*(p-1)+Math.max(d,0))/p;al=(al*(p-1)+Math.max(-d,0))/p;o.push(al?100-100/(1+ag/al):100)}return o}
+function atr(c,p=14){let tr=[0];for(let i=1;i<c.length;i++)tr.push(Math.max(c[i].high-c[i].low,Math.abs(c[i].high-c[i-1].close),Math.abs(c[i].low-c[i-1].close)));let a=tr.slice(1,p+1).reduce((x,y)=>x+y,0)/p,o=Array(p).fill(null);o.push(a);for(let i=p+1;i<tr.length;i++){a=(a*(p-1)+tr[i])/p;o.push(a)}return o}
+function macd(v){let a=ema(v,12),b=ema(v,26),m=v.map((_,i)=>a[i]-b[i]),s=ema(m,9);return[m,s]}
+function frame(c){let v=c.map(x=>x.close),i=v.length-1,[m,s]=macd(v),R=rsi(v),A=atr(c),e20=ema(v,20),e50=ema(v,50),q=c.slice(-20);return{p:v[i],e20:e20[i],e50:e50[i],r:R[i],m:m[i],ms:s[i],a:A[i],sup:Math.min(...q.map(x=>x.low)),res:Math.max(...q.map(x=>x.high))}}
+async function load(symbol,tf,key){let u="https://api.twelvedata.com/time_series?symbol="+encodeURIComponent(symbol)+"&interval="+tf+"&outputsize=120&apikey="+encodeURIComponent(key),r=await fetch(u),d=await r.json();if(!r.ok||d.status==="error")throw Error(d.message||"Data request failed");if(!d.values||d.values.length<60)throw Error("Not enough "+tf+" candles");return d.values.map(x=>({time:x.datetime,open:+x.open,high:+x.high,low:+x.low,close:+x.close})).reverse()}
+async function run(){
+ let key=($("key")||{}).value?.trim(),symbol=($("symbol")||{}).value||"EUR/USD",tf=($("interval")||{}).value||"5min";
+ if(!key){if($("status"))$("status").textContent="Enter your Twelve Data API key.";return}
+ localStorage.setItem("josafx_key",key);
+ if($("status"))$("status").textContent="Analyzing 4H → 1H → 15M → "+tf+"…";
+ try{
+  let [c4,c1,c15,ce]=await Promise.all([load(symbol,"4h",key),load(symbol,"1h",key),load(symbol,"15min",key),load(symbol,tf,key)]);
+  let a=frame(c4),b=frame(c1),c=frame(c15),d=frame(ce),score=0,why=[];
+  if(a.e20>a.e50){score+=2;why.push("4H bullish")}else{score-=2;why.push("4H bearish")}
+  if(b.e20>b.e50){score+=2;why.push("1H bullish")}else{score-=2;why.push("1H bearish")}
+  if(c.e20>c.e50){score++;why.push("15M bullish")}else{score--;why.push("15M bearish")}
+  if(d.m>d.ms){score++;why.push("MACD bullish")}else{score--;why.push("MACD bearish")}
+  if(d.r>=52&&d.r<=68){score++;why.push("RSI bullish")}else if(d.r<=48&&d.r>=32){score--;why.push("RSI bearish")}
+  if(d.p>d.e20&&d.p>d.e50){score++;why.push("Entry price above EMAs")}else if(d.p<d.e20&&d.p<d.e50){score--;why.push("Entry price below EMAs")}
+  let sig=score>=6?"BUY":score<=-6?"SELL":"WAIT", conf=sig==="WAIT"?null:Math.min(95,50+Math.abs(score)*7);
+  let entry=d.p,sl="—",tp1="—",tp2="—";
+  if(sig==="BUY"){sl=Math.min(d.p-1.5*d.a,d.sup-.25*d.a);let risk=d.p-sl;tp1=d.p+1.5*risk;tp2=d.p+2*risk}
+  if(sig==="SELL"){sl=Math.max(d.p+1.5*d.a,d.res+.25*d.a);let risk=sl-d.p;tp1=d.p-1.5*risk;tp2=d.p-2*risk}
+  const put=(id,v)=>{if($(id))$(id).textContent=typeof v==="number"?v.toFixed(5):v};
+  put("price",d.p);put("entry",sig==="WAIT"?"—":entry);put("sl",sl);put("tp1",tp1);put("tp2",tp2);put("rsi",d.r);put("atr",d.a);put("confidence",conf?conf+"%":"WAIT");
+  if($("signal")){$("signal").className="signal "+sig.toLowerCase();$("signal").innerHTML="<h1>"+sig+"</h1><p>"+symbol+" • "+tf+" • Multi-timeframe</p>"}
+  if($("reasons"))$("reasons").innerHTML=why.map(x=>"• "+x).join("<br>")+"<br><br>• Support: "+d.sup.toFixed(5)+"<br>• Resistance: "+d.res.toFixed(5)+"<br>• Score: "+score+"/8";
+  if($("status"))$("status").textContent="✓ Live analysis updated "+new Date().toLocaleTimeString();
+ }catch(e){if($("status"))$("status").textContent="Error: "+e.message}
+}
+window.JosaFX2={run};
+window.addEventListener("DOMContentLoaded",()=>{if($("key"))$("key").value=localStorage.getItem("josafx_key")||""});
+})();
+</script>
+
+<script>
+if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(()=>{});
+</script>
+</body>
+
+</html>
