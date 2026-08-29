@@ -86,4 +86,8 @@ app.post("/api/admin/licenses/:key/activate", admin, (req,res)=>{
   res.json({ok:true,changed:info.changes});
 });
 
+app.get('/', (req, res) => {
+  res.send('JOSA-FX API is running smoothly!');
+});
+
 app.listen(PORT,()=>console.log(`JozaFX License API listening on port ${PORT}`));
