@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JozaFX Mentor</title>
+<style>
+body{font-family:system-ui;margin:0;background:#f4f7fb;color:#172033}.wrap{max-width:900px;margin:auto;padding:24px}
+.card{background:white;border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 4px 18px #0001}
+input,button{padding:12px;border-radius:10px;border:1px solid #ccd3df;font-size:16px}input{width:100%;box-sizing:border-box;margin:6px 0 12px}
+button{background:#0867d8;color:white;border:0;font-weight:700}.danger{background:#c62828}.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1}
+table{width:100%;border-collapse:collapse}td,th{padding:9px;border-bottom:1px solid #eee;text-align:left}
+.small{font-size:13px;color:#667085}.key{font-family:monospace;font-weight:700}
+</style></head>
+<body><div class="wrap">
+<h1>JozaFX Mentor</h1><p class="small">License administration panel. Keep your admin token private.</p>
+<div class="card"><label>API URL</label><input id="api" value="http://localhost:3000">
+<label>Mentor Admin Token</label><input id="token" type="password">
+<button onclick="load()">Load Licenses</button></div>
+<div class="card"><h2>Create License</h2><div class="row"><div><label>Client name</label><input id="client"></div><div><label>Days</label><input id="days" type="number" value="30" min="1"></div></div><button onclick="create()">Generate License</button><pre id="created"></pre></div>
+<div class="card"><h2>Licenses</h2><div id="list">Not loaded.</div></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const headers=()=>({"Content-Type":"application/json","Authorization":"Bearer "+$("token").value});
+async function load(){let r=await fetch($("api").value+"/api/admin/licenses",{headers:headers()});let d=await r.json();if(!d.ok)return $("list").textContent=d.error||"Error";$("list").innerHTML="<table><tr><th>Key</th><th>Client</th><th>Expires</th><th>Status</th><th></th></tr>"+d.licenses.map(x=>`<tr><td class="key">${x.license_key}</td><td>${x.client_name}</td><td>${new Date(x.expires_at).toLocaleDateString()}</td><td>${x.status}</td><td><button class="${x.status==="active"?"danger":""}" onclick="toggle('${x.license_key}','${x.status}')">${x.status==="active"?"Revoke":"Activate"}</button></td></tr>`).join("")+"</table>"}
+async function create(){let r=await fetch($("api").value+"/api/admin/licenses",{method:"POST",headers:headers(),body:JSON.stringify({client_name:$("client").value,days:Number($("days").value)})});let d=await r.json();$("created").textContent=d.ok?d.license.license_key:(d.error||"Error");if(d.ok)load()}
+async function toggle(key,status){await fetch($("api").value+"/api/admin/licenses/"+encodeURIComponent(key)+"/"+(status==="active"?"revoke":"activate"),{method:"POST",headers:headers()});load()}
+</script></body></html>

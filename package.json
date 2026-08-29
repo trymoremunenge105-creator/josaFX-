@@ -1,0 +1,14 @@
+{
+  "name": "josafx-license-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "JozaFX Mentor license verification and administration API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "express": "^5.1.0"
+  }
+}
