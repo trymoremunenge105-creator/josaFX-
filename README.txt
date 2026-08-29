@@ -1,4 +1,4 @@
-JosaFX Signal Advisor v3
+JozaFX Signal Advisor v3
 
 This is a signal-only PWA. It does not place trades.
 
@@ -10,7 +10,7 @@ Features:
 - Recent support/resistance
 - Signal history stored locally
 - Installable PWA shell
-- JosaFX license field prepared for a secure server-side license system
+- JozaFX license field prepared for a secure server-side license system
 
 Important:
 1. A Twelve Data API key is required for live market data.

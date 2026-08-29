@@ -1,0 +1,31 @@
+JozaFX Mentor + License Backend
+================================
+
+WHAT IS INCLUDED
+- backend/server.js       License API + SQLite database
+- backend/mentor.html     Mentor administration page
+- backend/package.json    Node.js dependencies
+- backend/.env.example    Required server environment variables
+- index.html              Your JozaFX PWA with the license-client module
+
+IMPORTANT
+The backend must run on a server/host. Do NOT put the admin token in the PWA.
+The PWA only sends a license key to /api/license/verify.
+
+BASIC DEPLOYMENT
+1. Deploy the backend folder to a Node.js host.
+2. Set JOZAFX_ADMIN_TOKEN to a long random secret.
+3. Run: npm install
+4. Run: npm start
+5. Open mentor.html through the backend/your HTTPS host.
+6. Set the PWA's JOZAFX_LICENSE_API to the HTTPS URL of the backend.
+7. Create a license in the Mentor panel and test verification in the app.
+
+SECURITY
+- Use HTTPS in production.
+- Never commit your real admin token to GitHub.
+- SQLite is suitable for a small prototype; for a larger service use a managed database.
+- This package is for software access control. It does not place trades.
+
+NOTE
+The license UI is a backend-ready foundation. Your existing PWA's exact login screen may use different element IDs, so connect the verify() call to its license-submit button after deployment.
